@@ -39,6 +39,7 @@ yarn-error.*
 
 # Firebase Configuration (IMPORTANT: Keep your credentials safe!)
 firebase.config.js
+admin.config.js
 
 # API Keys and Secrets
 *secret*
