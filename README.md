@@ -284,9 +284,7 @@ eas build --platform ios
 
 See [FIREBASE_SETUP.md](FIREBASE_SETUP.md) for more troubleshooting tips.
 
-## 📱 Screenshots
 
-*(Add screenshots of your app here)*
 
 ## 🤝 Contributing
 
@@ -304,7 +302,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Authors
 
-- Your Name - [GitHub](https://github.com/yourusername)
+- Sufyan Siddiqui
+- Abdul Karim
 
 ## 🙏 Acknowledgments
 
@@ -314,10 +313,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Geoapify for geocoding services
 - EmailJS for email notifications
 
-## 📞 Support
 
-For support, email your-email@example.com or open an issue in the GitHub repository.
-
----
-
-**Made with ❤️ using React Native and Expo**
