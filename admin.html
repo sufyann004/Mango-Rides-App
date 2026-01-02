@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Aam Admin - Drivers & Rides</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f4f9; }
+        .sidebar { height: 100vh; background: #1A1A1A; color: white; padding: 20px; position: fixed; width: 250px; }
+        .content { margin-left: 250px; padding: 40px; }
+        .logo { color: #FF8C00; font-weight: bold; font-size: 24px; }
+        .driver-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
+        .vehicle-photo { width: 120px; height: 80px; border-radius: 8px; object-fit: cover; }
+        .card { border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .nav-link:hover { color: #FF8C00 !important; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <span class="logo">🥭 Aam Admin</span>
+        <hr>
+        <div class="nav flex-column">
+            <a href="#rides" class="nav-link text-white">Rides (Live)</a>
+            <a href="#drivers" class="nav-link text-secondary">Driver Approvals</a>
+        </div>
+    </div>
+
+    <div class="content">
+        <h3 id="drivers">Pending Driver Applications</h3>
+        <p class="text-muted" id="driver-count">Loading...</p>
+        <div id="driver-container" class="row mt-4"></div>
+        
+        <h3 class="mt-5" id="rides">Live Rides</h3>
+        <div id="rides-container" class="mt-3"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCldTSVZmWCiD63OhvtfTpoKNyqLi07n8k",
+            authDomain: "amy-3112011.firebaseapp.com",
+            projectId: "amy-3112011",
+            storageBucket: "amy-3112011.firebasestorage.app",
+            messagingSenderId: "359444234132",
+            appId: "1:359444234132:web:bf288efa3982fd1a0a1981",
+            measurementId: "G-17J7ZC26D4"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 1. DRIVERS LISTENER
+        const qDrivers = query(collection(db, "drivers"), where("status", "==", "pending"));
+        onSnapshot(qDrivers, (snap) => {
+            const container = document.getElementById('driver-container');
+            const countEl = document.getElementById('driver-count');
+            container.innerHTML = '';
+            
+            if (snap.empty) {
+                countEl.textContent = 'No pending applications';
+                container.innerHTML = '<p class="text-muted">No driver applications waiting for approval.</p>';
+                return;
+            }
+            
+            countEl.textContent = `${snap.size} pending application(s)`;
+            
+            snap.forEach(d => {
+                const data = d.data();
+                const categoryName = data.category?.name || 'Unknown Category';
+                const driverPhotoSrc = data.driverPhoto || 'https://via.placeholder.com/80?text=No+Photo';
+                const vehiclePhotoSrc = data.vehiclePhoto || 'https://via.placeholder.com/120x80?text=No+Photo';
+                
+                container.innerHTML += `
+                    <div class="col-md-6 mb-4">
+                        <div class="card p-4">
+                            <div class="d-flex align-items-center mb-3">
+                                <img src="${driverPhotoSrc}" class="driver-photo me-3" alt="Driver Photo" onerror="this.src='https://via.placeholder.com/80?text=Error'">
+                                <div>
+                                    <h5 class="mb-1">${data.name || 'N/A'}</h5>
+                                    <span class="badge bg-warning text-dark">${categoryName}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted">Email</small>
+                                    <p class="mb-1">${data.email || 'N/A'}</p>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Phone</small>
+                                    <p class="mb-1">${data.phone || 'N/A'}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted">CNIC</small>
+                                    <p class="mb-1">${data.cnic || 'N/A'}</p>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Age</small>
+                                    <p class="mb-1">${data.age || 'N/A'}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted">Vehicle</small>
+                                    <p class="mb-1">${data.make || ''} ${data.model || ''}</p>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">License Plate</small>
+                                    <p class="mb-1">${data.licensePlate || 'N/A'}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted">Vehicle Type</small>
+                                    <p class="mb-1">${data.vehicleType || 'N/A'}</p>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">AC</small>
+                                    <p class="mb-1">${data.hasAC ? 'Yes' : 'No'}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <small class="text-muted">Address</small>
+                                <p class="mb-1">${data.address || 'N/A'}</p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <small class="text-muted">Vehicle Photo</small><br>
+                                <img src="${vehiclePhotoSrc}" class="vehicle-photo mt-2" alt="Vehicle Photo" onerror="this.src='https://via.placeholder.com/120x80?text=Error'">
+                            </div>
+                            
+                            <div class="d-flex gap-2 mt-3">
+                                <button onclick="approveDriver('${d.id}', '${data.email || ''}', '${data.name || ''}')" class="btn btn-success flex-grow-1">
+                                    ✓ Approve
+                                </button>
+                                <button onclick="rejectDriver('${d.id}', '${data.email || ''}', '${data.name || ''}')" class="btn btn-danger flex-grow-1">
+                                    ✗ Reject
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }, (error) => {
+            console.error("Error fetching drivers:", error);
+            document.getElementById('driver-count').textContent = 'Error loading drivers';
+        });
+
+        // 2. APPROVE FUNCTION
+        window.approveDriver = async (id, email, name) => {
+            if (!confirm(`Approve driver: ${name}?`)) return;
+            try {
+                await updateDoc(doc(db, "drivers", id), { status: 'approved' });
+                alert(`Driver "${name}" approved successfully!`);
+            } catch (error) {
+                console.error("Approve error:", error);
+                alert("Failed to approve driver: " + error.message);
+            }
+        };
+
+        // 3. REJECT FUNCTION
+        window.rejectDriver = async (id, email, name) => {
+            if (!confirm(`Reject driver: ${name}?`)) return;
+            try {
+                await updateDoc(doc(db, "drivers", id), { status: 'rejected' });
+                alert(`Driver "${name}" rejected.`);
+            } catch (error) {
+                console.error("Reject error:", error);
+                alert("Failed to reject driver: " + error.message);
+            }
+        };
+
+        // 4. LIVE RIDES LISTENER
+        const qRides = query(collection(db, "bookings"), where("status", "in", ["searching", "negotiating", "accepted", "in_progress"]));
+        onSnapshot(qRides, (snap) => {
+            const container = document.getElementById('rides-container');
+            container.innerHTML = '';
+            
+            if (snap.empty) {
+                container.innerHTML = '<p class="text-muted">No active rides at the moment.</p>';
+                return;
+            }
+            
+            snap.forEach(r => {
+                const data = r.data();
+                const statusColors = {
+                    'searching': 'warning',
+                    'negotiating': 'info',
+                    'accepted': 'primary',
+                    'in_progress': 'success'
+                };
+                const statusColor = statusColors[data.status] || 'secondary';
+                
+                container.innerHTML += `
+                    <div class="card p-3 mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${data.riderName || 'Unknown Rider'}</strong>
+                                <span class="badge bg-${statusColor} ms-2">${data.status}</span>
+                            </div>
+                            <div class="text-end">
+                                <span class="text-muted">${data.distance || '?'} km</span>
+                                <strong class="ms-2">PKR ${data.finalPrice || data.estimatedFare || '?'}</strong>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted d-block">
+                                <strong>From:</strong> ${data.pickupAddress || 'Unknown'}
+                            </small>
+                            <small class="text-muted d-block">
+                                <strong>To:</strong> ${data.dropoffAddress || 'Unknown'}
+                            </small>
+                        </div>
+                        ${data.driverName ? `<small class="text-success mt-2 d-block">Driver: ${data.driverName}</small>` : ''}
+                    </div>
+                `;
+            });
+        }, (error) => {
+            console.error("Error fetching rides:", error);
+        });
+    </script>
+</body>
+</html>

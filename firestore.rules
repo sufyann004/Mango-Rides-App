@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Drivers collection
+    match /drivers/{driverId} {
+      // Allow read if authenticated
+      allow read: if isAuthenticated();
+      
+      // Allow create if authenticated
+      allow create: if isAuthenticated() && request.auth.uid == driverId;
+      
+      // Allow update/delete only by owner
+      allow update, delete: if isOwner(driverId);
+    }
+    
+    // Riders collection
+    match /riders/{riderId} {
+      // Allow read if authenticated
+      allow read: if isAuthenticated();
+      
+      // Allow create if authenticated
+      allow create: if isAuthenticated() && request.auth.uid == riderId;
+      
+      // Allow update/delete only by owner
+      allow update, delete: if isOwner(riderId);
+    }
+    
+    // Bookings collection
+    match /bookings/{bookingId} {
+      // Allow read if user is either the rider or the driver
+      allow read: if isAuthenticated() && 
+        (request.auth.uid == resource.data.riderId || 
+         request.auth.uid == resource.data.driverId);
+      
+      // Allow create if authenticated
+      allow create: if isAuthenticated();
+      
+      // Allow update if user is rider or driver involved in the booking
+      allow update: if isAuthenticated() && 
+        (request.auth.uid == resource.data.riderId || 
+         request.auth.uid == resource.data.driverId);
+      
+      // Allow delete only by rider or driver
+      allow delete: if isAuthenticated() && 
+        (request.auth.uid == resource.data.riderId || 
+         request.auth.uid == resource.data.driverId);
+      
+      // Messages subcollection (for in-ride chat)
+      match /messages/{messageId} {
+        // Allow read if user is rider or driver of parent booking
+        allow read: if isAuthenticated() && 
+          (request.auth.uid == get(/databases/$(database)/documents/bookings/$(bookingId)).data.riderId ||
+           request.auth.uid == get(/databases/$(database)/documents/bookings/$(bookingId)).data.driverId);
+        
+        // Allow create if user is rider or driver of parent booking
+        allow create: if isAuthenticated() && 
+          (request.auth.uid == get(/databases/$(database)/documents/bookings/$(bookingId)).data.riderId ||
+           request.auth.uid == get(/databases/$(database)/documents/bookings/$(bookingId)).data.driverId);
+      }
+    }
+    
+    // Mail collection (for email notifications)
+    match /mail/{mailId} {
+      // Allow create for authenticated users (for sending emails)
+      allow create: if isAuthenticated();
+      
+      // Allow read/update/delete only by system (no user access)
+      allow read, update, delete: if false;
+    }
+  }
+}
